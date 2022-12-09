@@ -20,7 +20,6 @@ CREATE TABLE Meals(
 CREATE TABLE CurrentMenu(
     IntroduceDate date NOT NULL,
     MealID        int  NOT NULL,
-    CONSTRAINT DateError PRIMARY KEY (IntroduceDate <= (GETDATE() -1))
 )
 
 
