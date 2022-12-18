@@ -1,77 +1,56 @@
-CREATE VIEW CurrentMenu AS
-SELECT M.Name, M.Price, C.CategoryName
-    FROM CurrentMenu AS Curr 
-        LEFT JOIN Meals AS M ON M.MealID = Curr.MealID
-WHERE DATEDIFF(DAY,GETDATE(),Curr.IntroduceDate) <= 14;
-
-CREATE VIEW OrdersForToday AS
-SELECT  M.Name, M.Price,AC.Quantity, o.OrderDate FROM Orders AS o 
-    INNER JOIN OrderContents AC ON AC.OrderID = o.OrderID
-        INNER JOIN Meals AS M ON M.MealID = AC.MealID
-WHERE DATEDIFF(DAY,GETDATE(),o.OrderDate) = 0
-
-CREATE VIEW MealInfo AS
-    SELECT C.CategoryName, M.Name, C.Description FROM Meals AS M
-        INNER JOIN Categories C on M.CategoryID = C.CategoryID
-GROUP BY MealID
-
-create view TotalValues as
-SELECT O.OrderID,C.CustomerID,SUM(OC.Quantity * M.Price) * (1-ISNULL(
-    (SELECT TOP 1 CAST(D.Value AS FLOAT)/100 FROM Discount D
-    WHERE D.StartingDate <= GETDATE()
-    ORDER BY D.StartingDate DESC))) AS TotalValue FROM Customers C
-        INNER JOIN Orders O ON C.CustomerID = O.CustomerID
-            INNER JOIN OrderContents OC ON O.OrderID = OC.OrderID
-                INNER JOIN Meals M ON OC.MealID = M.MealID
-                    LEFT JOIN Discounts D ON C.CustomerID = D.CustomerID
-GROUP BY C.CustomerID, O.OrderID, D.StartingDate, D.Type
-
-
-CREATE VIEW NumberOfOrders AS
-SELECT C.customerID, COUNT(O.OrderID) AS NumbersOrders FROM Customers C
+-- Wyświetla zniżki (i ich typ) wykorzystane w danym roku --
+CREATE VIEW DiscountPerYear AS
+    SELECT DISTINCT DiscountID,
+           Type,
+           YEAR(OrderDate) as Year
+    FROM Discounts D
+    INNER JOIN IndividualCustomers I on I.CustomerID = D.CustomerID
+    INNER JOIN Customer C on I.CustomerID = C.CustomerID
     INNER JOIN Orders O on C.CustomerID = O.CustomerID
-GROUP BY C.CustomerID
+    GROUP BY Year, Type
+go
 
+-- Wyświetla wszystkie znizki (ich typ) przyznane w kazdym miesiacu --
+CREATE VIEW DiscountMonthly AS
+    SELECT Type,
+           YEAR(OrderDate) as Year,
+           MONTH(OrderDate) as Month
+    FROM Discounts D
+    INNER JOIN IndividualCustomers I on I.CustomerID = D.CustomerID
+    INNER JOIN Customer C on I.CustomerID = C.CustomerID
+    INNER JOIN Orders O on C.CustomerID = O.CustomerID
+    GROUP BY Year, Month, Type
+go
 
-CREATE VIEW RankOfMeals as
-SELECT M.Name, COUNT(OC.Quantity) as OrdersQuantity FROM Orders O
-    INNER JOIN OrderContents OC on O.OrderID = OC.OrderID
-        INNER JOIN Meals M on M.MealID = OC.MealID
-WHERE DATEDIFF(DAY,GETDATE(),O.OrderDate) <= 14
-GROUP BY M.MealID,M.Name
+-- Wyświetla ilość zniżek przyznanych w danym roku i miesiącu
+CREATE VIEW DiscountCountMonthly AS
+    SELECT Type,
+           YEAR(OrderDate) as Year,
+           MONTH(OrderDate) as Month
+           COUNT(D.DiscountID) as DiscountCount
+    FROM Discounts D
+    INNER JOIN IndividualCustomers I on I.CustomerID = D.CustomerID
+    INNER JOIN Customer C on I.CustomerID = C.CustomerID
+    INNER JOIN Orders O on C.CustomerID = O.CustomerID
+    GROUP BY Year, Month, Type
+go
 
-CREATE VIEW OrdersToPay AS
-SELECT O.OrderID, R.CustomerID, O.OrderDate,FROM Orders O 
-    INNER JOIN Reservations R ON O.OrderID = R.OrderID
-        INNER JOIN IndividualReservation IR WHERE IR.ReservationID = R.ReservationID 
-WHERE IR.Prepaid = 0
+-- Wyświetla informacje o kliencie i ilości jego zamówień
+CREATE VIEW CustomerInfo AS
+    SELECT C.CustomerID,
+           C.City + ', ' + C.PostalCode + ', ' + C.Street as address,
+           COUNT(O.OrderID)
+    FROM Customers C
+    INNER JOIN Orders O on O.CustomerID = C.CustomerID
+    GROUP BY C.CustomerID, C.City + ', ' + C.PostalCode + ', ' + C.Street
+go
 
-
-CREATE VIEW OrdersInfo AS
-SELECT O.OrderID,M.Name,O.CustomerID FROM Orders O
-    INNER JOIN OrderContents OC ON OC.OrderID = O.OrderID
-        INNER JOIN Meals M ON M.MealID = OC.MealID
-GROUP BY O.OrderID,O.CustomerID,M.Name
-
-
-CREATE VIEW LastVisableMeals AS
-SELECT M.Name,M.Price,ChangeDate FROM MealsHistory
-    INNER JOIN Meals M ON M.MealID = OC.MealID
-ORDER BY ChangeDate DESC
-GROUP By M.MealID
-
-CREATE VIEW MaxPrice AS
-SELECT MAX(Price),MealID FROM MealsHistory
-GROUP BY MealID
-
-CREATE VIEW MinPrice AS
-SELECT MIN(Price),MealID FROM MealsHistory
-GROUP BY MealID
-
-CREATE VIEW AvgPrice AS
-SELECT AVG(Price),MealID FROM MealsHistory
-GROUP BY MealID
-
-
-
-
+-- Wyświetla ile zamówień złożyli poszczególni pracownicy firm
+CREATE VIEW CompanyCustomersOrders AS
+    SELECT C.CustomerID,
+           COUNT(O.OrderID)
+    FROM Customers C
+    INNER JOIN Orders O on O.CustomerID = C.CustomerID
+    LEFT JOIN CompanyCustomers CC on CC.CustomerID = C.CustomerID
+    GROUP BY C.CustomerID
+go
