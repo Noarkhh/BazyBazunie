@@ -6,8 +6,8 @@ CREATE TABLE Category
     CategoryID   int          NOT NULL,
     CategoryName varchar(55)  NOT NULL,
     Description  varchar(255) NOT NULL,
-    CONSTRAINT CategoryCheck CHECK (CategoryName not like '%[^a-zA-Z ]%')
-        CONSTRAINT CategoryPK PRIMARY KEY (CategoryID)
+    CONSTRAINT CategoryCheck CHECK (CategoryName not like '%[^a-zA-Z ]%'),
+    CONSTRAINT CategoryPK PRIMARY KEY (CategoryID)
 )
 
 -- Meals --
@@ -15,10 +15,11 @@ CREATE TABLE Category
 
 CREATE TABLE Meals
 (
-    CategoryID int         NOT NULL,
-    MealID     int         NOT NULL,
-    NameMeals  varchar(55) NOT NULL,
-    Price      money       NOT NULL,
+    CategoryID   int         NOT NULL,
+    MealID       int         NOT NULL,
+    NameMeals    varchar(55) NOT NULL,
+    Price        money       NOT NULL,
+    Discontinued bit         NOT NULL,
     CONSTRAINT ErrorPrice CHECK (Price > 0),
     CONSTRAINT NameMealsCheck CHECK (NameMeals not like '%[^a-zA-Z ]%'),
     CONSTRAINT MealsPK PRIMARY KEY (MealID)
@@ -71,7 +72,7 @@ CREATE TABLE TakeawayOrders
     CONSTRAINT ValidDate CHECK (TakeawayDate > GETDATE())
 )
 
-ALTER TABLE OrdersTakeaways
+ALTER TABLE TakeawayOrders
     ADD CONSTRAINT OrderNumber
         FOREIGN KEY (OrderID)
             REFERENCES Orders (OrderID)
@@ -129,7 +130,7 @@ CREATE TABLE Invoices
     CONSTRAINT InvoicesPK PRIMARY KEY (OrderID)
 )
 
-ALTER TABLE Invoice
+ALTER TABLE Invoices
     ADD CONSTRAINT RestaurantNIP
         FOREIGN KEY (RestaurantNIP)
             REFERENCES Restaurant (NIP)
@@ -157,8 +158,10 @@ CREATE TABLE Orders
     OrderID    int      NOT NULL,
     CustomerID int      NOT NULL,
     OrderDate  datetime NOT NULL,
+    Discount   float    NOT NULL,
 
     CONSTRAINT OrdersPK PRIMARY KEY (OrderID),
+    CONSTRAINT ValidDiscount CHECK (Discount BETWEEN 0 AND 1)
 )
 
 ALTER TABLE Orders
@@ -202,10 +205,9 @@ CREATE TABLE IndividualReservations
 (
     ReservationID int          NOT NULL,
     PaymentMethod varchar(255) NOT NULL,
-    Paid          int          NOT NULL,
+    Paid          bit          NOT NULL,
 
     CONSTRAINT IndividualReservationsPK PRIMARY KEY (ReservationID),
-    CONSTRAINT PaidIsBool CHECK (Paid BETWEEN 0 AND 1)
 )
 
 ALTER TABLE IndividualReservations
@@ -291,4 +293,70 @@ CREATE TABLE MenuHistory
     CONSTRAINT DurationDaysPositive CHECK (DurationDays > 0)
 )
 
+CREATE TABLE Customers
+(
+    CustomerID int          NOT NULL,
+    Email      varchar(255) NOT NULL,
+    Phone      char(12)     NOT NULL,
+    City       varchar(255) NOT NULL,
+    Street     varchar(255) NOT NULL,
+    PostalCode varchar(255) NOT NULL,
 
+    CONSTRAINT ValidPostalCode CHECK (PostalCode LIKE
+                                      '[0-9][0-9]-[0-9][0-9][0-9]'),
+    CONSTRAINT ValidEmail CHECK (Email LIKE '%@%'),
+    CONSTRAINT ValidPhone CHECK (Phone LIKE
+                                 '+[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
+    CONSTRAINT Customers_pk PRIMARY KEY (CustomerID)
+)
+
+CREATE TABLE Employees
+(
+    EmployeeID int NOT NULL,
+    CompanyID  int NOT NULL,
+
+    CONSTRAINT Employees_pk PRIMARY KEY (EmployeeID),
+    CONSTRAINT Employees_pk PRIMARY KEY (CompanyID),
+    CONSTRAINT FOREIGN KEY (EmployeeID) REFERENCES IndividualCustomers (CustomerID),
+--     CONSTRAINT FOREIGN KEY (EmployeeID) REFERENCES ReservationEmployees (EmployeeID),
+    CONSTRAINT FOREIGN KEY (CompanyID) REFERENCES CompanyCustomers (CustomerID)
+)
+
+CREATE TABLE CompanyCustomers
+(
+    CustomerID int          NOT NULL,
+    Name       varchar(255) NOT NULL,
+    NIP        char(10)     NOT NULL,
+
+    CONSTRAINT CompanyClients_pk PRIMARY KEY (CustomerID),
+    CONSTRAINT ValidNIP CHECK ( NIP LIKE
+                                '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+)
+
+CREATE TABLE ReservationEmployees
+(
+    ReservationID int NOT NULL,
+    EmployeeID    int NOT NULL,
+
+    CONSTRAINT ReservationEmployees_pk PRIMARY KEY (ReservationID),
+    CONSTRAINT ReservationEmployees_pk PRIMARY KEY (EmployeeID),
+    CONSTRAINT FOREIGN KEY (EmployeeID) REFERENCES Employees (EmployeeID),
+    CONSTRAINT FOREIGN KEY (ReservationID) REFERENCES CompanyReservation (ReservationID)
+)
+
+CREATE TABLE CompanyReservation
+(
+    ReservationID int NOT NULL,
+
+    CONSTRAINT CompanyReservation_pk PRIMARY KEY (ReservationID),
+    CONSTRAINT FOREIGN KEY (ReservationID) REFERENCES ReservationEmployees (ReservationID)
+)
+
+CREATE TABLE Tables
+(
+    TableID  int          NOT NULL,
+    Seats    int          NOT NULL,
+    Location varchar(255) NOT NULL,
+
+    CONSTRAINT Tables_pk PRIMARY KEY (TableID)
+)
