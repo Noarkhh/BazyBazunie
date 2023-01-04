@@ -30,6 +30,26 @@ RETURNS TABLE AS
 GROUP BY O.OrderID, OrderDate
 HAVING MONTH(O.OrderDate) = MONTH(@date)
 
+CREATE FUNCTION getThisYearTotalIncome(@date date)
+RETURNS float AS
+    BEGIN
+        RETURN
+            (SELECT SUM(M.Price * OC.Quantity * (1 - O.Discount)) as TotalValue
+            FROM Meals M
+            INNER JOIN OrderContents OC on M.MealID = OC.MealID
+            INNER JOIN Orders O on O.OrderID = OC.OrderID
+            WHERE YEAR(@date) = YEAR(O.OrderDate))
+    end
+
+CREATE FUNCTION getAvgCurrentMenuPrice()
+RETURNS float AS
+    BEGIN
+        RETURN
+            (SELECT AVG(M.Price)
+             FROM CurrentMenu CR
+             LEFT JOIN Meals M on M.MealID = CR.MealID)
+    end
+
 
 CREATE FUNCTION getOrdersWithHigherValue(@val float)
 RETURNS TABLE AS
