@@ -122,13 +122,15 @@ ALTER TABLE Employees
 
 CREATE TABLE Orders
 (
-    OrderID    int      NOT NULL IDENTITY (1, 1),
-    CustomerID int      NOT NULL,
-    OrderDate  datetime NOT NULL,
-    Discount   float    NOT NULL,
+    OrderID    int         NOT NULL IDENTITY (1, 1),
+    CustomerID int         NOT NULL,
+    OrderDate  datetime    NOT NULL,
+    Discount   float       NOT NULL,
+    Status     varchar(20) NOT NULL,
 
     CONSTRAINT OrdersPK PRIMARY KEY (OrderID),
-    CONSTRAINT ValidDiscount CHECK (Discount BETWEEN 0 AND 1)
+    CONSTRAINT ValidDiscount CHECK (Discount BETWEEN 0 AND 1),
+    CONSTRAINT OrderStatusEnum CHECK (Status IN ('Pending', 'Complete'))
 )
 
 ALTER TABLE Orders
@@ -237,9 +239,11 @@ CREATE TABLE Reservations
     ArrivalDate       datetime NOT NULL,
     Duration          time     NOT NULL,
     NumberOfCustomers int      NOT NULL,
+    Status            varchar(20) NOT NULL,
 
     CONSTRAINT ReservationsPK PRIMARY KEY (ReservationID),
-    CONSTRAINT PositiveNumberOfCustomers CHECK (NumberOfCustomers > 0)
+    CONSTRAINT PositiveNumberOfCustomers CHECK (NumberOfCustomers > 0),
+    CONSTRAINT ReservationStatusEnum CHECK (Status IN ('Pending', 'Complete'))
 )
 
 ALTER TABLE Reservations
@@ -308,18 +312,22 @@ ALTER TABLE ReservationEmployees
 
 CREATE TABLE Discounts
 (
-    DiscountID    int   NOT NULL IDENTITY (1, 1),
-    CustomerID    int   NOT NULL,
-    DiscountType  int   NOT NULL,
-    DiscountValue float NOT NULL,
-    StartDate     date  NOT NULL,
-    EndDate       date,
+    DiscountID        int         NOT NULL IDENTITY (1, 1),
+    CustomerID        int         NOT NULL,
+    DiscountType      int         NOT NULL,
+    DiscountValue     float       NOT NULL,
+    StartDate         date        NOT NULL,
+    EndDate           date,
+    Status            varchar(20) NOT NULL,
+    OrdersAccumulated int         NOT NULL,
+    MoneyAccumulated  money       NOT NULL,
 
     CONSTRAINT DiscountsPK PRIMARY KEY (DiscountID),
     CONSTRAINT ValidDiscountType CHECK (DiscountType BETWEEN 1 AND 2),
     CONSTRAINT ValidDiscountValue CHECK (DiscountValue BETWEEN 0 AND 1),
     CONSTRAINT EndDateForDiscount2 CHECK (DiscountType = 1 OR EndDate IS NOT NULL),
-    CONSTRAINT ValidDateRelation CHECK (EndDate > StartDate)
+    CONSTRAINT ValidDateRelation CHECK (EndDate > StartDate),
+    CONSTRAINT StatusEnum CHECK (Status IN ('Counting', 'Active', 'Deactivated'))
 )
 
 ALTER TABLE Discounts
